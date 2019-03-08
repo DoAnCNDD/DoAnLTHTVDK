@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "803679631838",
+    "firebase_url": "https://doanlthtvdk.firebaseio.com",
+    "project_id": "doanlthtvdk",
+    "storage_bucket": "doanlthtvdk.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:803679631838:android:9edbc1b3f5a70797",
+        "android_client_info": {
+          "package_name": "com.doanlthtvdk.doanlthtvdk"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "803679631838-grjhub23qervn6n2tu5ats1ruq31bl08.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.doanlthtvdk.doanlthtvdk",
+            "certificate_hash": "943bb0cc1b60d7664b446f1676cf35ffde135a9b"
+          }
+        },
+        {
+          "client_id": "803679631838-dade2h96h9s5e6o8k6n83pmbbo7sfv25.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDAerI_QBFzodOPrhIZDFIAUVkDiBj02LY"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 2,
+          "other_platform_oauth_client": [
+            {
+              "client_id": "803679631838-dade2h96h9s5e6o8k6n83pmbbo7sfv25.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
