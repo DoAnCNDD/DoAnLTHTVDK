@@ -5,7 +5,9 @@ admin.initializeApp();
 
 export const sendNotification = functions.database.ref('/histories/{historyId}')
   .onCreate(async (snapshot, context) => {
-    const history: { [key: string]: any } = snapshot.val();
+    await snapshot.ref.child('time').set(admin.database.ServerValue.TIMESTAMP);
+
+    const history: { [key: string]: any } = (await snapshot.ref.once('value')).val();
     const historyData: { [key: string]: string } = Object.keys(history).reduce(
       (acc, k) => ({ ...acc, [k]: history[k].toString() }),
       {}
