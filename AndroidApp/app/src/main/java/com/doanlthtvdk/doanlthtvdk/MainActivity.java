@@ -1,24 +1,19 @@
 package com.doanlthtvdk.doanlthtvdk;
 
-import android.content.DialogInterface;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.CompoundButton;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.firebase.ui.database.FirebaseRecyclerAdapter;
 import com.firebase.ui.database.FirebaseRecyclerOptions;
-import com.firebase.ui.database.SnapshotParser;
-import com.google.android.gms.tasks.OnFailureListener;
-import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.firebase.database.DataSnapshot;
@@ -39,14 +34,17 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.transition.Fade;
+import androidx.transition.TransitionManager;
+import androidx.transition.TransitionSet;
 
 
 class HistoryVH extends RecyclerView.ViewHolder {
-    final DateFormat dateFormat = new SimpleDateFormat("HH:mm, dd/MM/yyyy");
-    final ImageView imageStatus;
-    final ImageView imageDelete;
-    final TextView textTime;
-    final TextView textStatus;
+    private final DateFormat dateFormat = new SimpleDateFormat("HH:mm, dd/MM/yyyy");
+    private final ImageView imageStatus;
+    private final ImageView imageDelete;
+    private final TextView textTime;
+    private final TextView textStatus;
 
     public HistoryVH(@NonNull View itemView) {
         super(itemView);
@@ -60,42 +58,20 @@ class HistoryVH extends RecyclerView.ViewHolder {
         textTime.setText(dateFormat.format(new Date(history.time)));
         textStatus.setText(history.verified ? "Verified" : "Not verified");
         imageStatus.setImageResource(history.verified ? R.drawable.ic_done_black_24dp : R.drawable.ic_sms_failed_black_24dp);
-        imageDelete.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-
-                new AlertDialog.Builder(itemView.getContext())
-                        .setTitle("Delete history")
-                        .setMessage("Are you sure?")
-                        .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialog, int which) {
-                                dialog.dismiss();
-                            }
-                        })
-                        .setPositiveButton("OK", new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialog, int which) {
-                                dialog.dismiss();
-                                FirebaseDatabase.getInstance()
-                                        .getReference("histories/" + history.id)
-                                        .removeValue()
-                                        .addOnSuccessListener(new OnSuccessListener<Void>() {
-                                            @Override
-                                            public void onSuccess(Void aVoid) {
-                                                Toast.makeText(itemView.getContext(), "Delete successfully", Toast.LENGTH_SHORT).show();
-                                            }
-                                        })
-                                        .addOnFailureListener(new OnFailureListener() {
-                                            @Override
-                                            public void onFailure(@NonNull Exception e) {
-                                                Toast.makeText(itemView.getContext(), "Delete failure: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                                            }
-                                        });
-                            }
-                        })
-                        .show();
-            }
+        imageDelete.setOnClickListener(__ -> {
+            new AlertDialog.Builder(itemView.getContext())
+                    .setTitle("Delete history")
+                    .setMessage("Are you sure?")
+                    .setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss())
+                    .setPositiveButton("OK", (dialog, which) -> {
+                        dialog.dismiss();
+                        FirebaseDatabase.getInstance()
+                                .getReference("histories/" + history.id)
+                                .removeValue()
+                                .addOnSuccessListener(___ -> Toast.makeText(itemView.getContext(), "Delete successfully", Toast.LENGTH_SHORT).show())
+                                .addOnFailureListener(e -> Toast.makeText(itemView.getContext(), "Delete failure: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+                    })
+                    .show();
         });
     }
 }
@@ -105,6 +81,7 @@ public class MainActivity extends AppCompatActivity {
     private RecyclerView recyclerHistory;
     private FirebaseRecyclerAdapter<History, HistoryVH> adapter;
     private FloatingActionButton fab;
+    private ProgressBar progressBar;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -115,16 +92,14 @@ public class MainActivity extends AppCompatActivity {
         setSupportActionBar(toolbar);
 
         fab = findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
-            }
+        fab.setOnClickListener(view -> {
+            Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
+                    .setAction("Action", null).show();
         });
 
         switchOnOff = findViewById(R.id.switch_on_off);
         recyclerHistory = findViewById(R.id.recycler_history);
+        progressBar = findViewById(R.id.progress_bar);
 
         setupRecycler();
         setupSwitch();
@@ -158,14 +133,10 @@ public class MainActivity extends AppCompatActivity {
                 .orderByChild("time");
 
         final FirebaseRecyclerOptions<History> options = new FirebaseRecyclerOptions.Builder<History>()
-                .setQuery(query, new SnapshotParser<History>() {
-                    @NonNull
-                    @Override
-                    public History parseSnapshot(@NonNull DataSnapshot snapshot) {
-                        final History history = snapshot.getValue(History.class);
-                        Objects.requireNonNull(history).id = snapshot.getKey();
-                        return history;
-                    }
+                .setQuery(query, snapshot -> {
+                    final History history = snapshot.getValue(History.class);
+                    Objects.requireNonNull(history).id = snapshot.getKey();
+                    return history;
                 })
                 .build();
         adapter = new FirebaseRecyclerAdapter<History, HistoryVH>(options) {
@@ -178,7 +149,6 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             protected void onBindViewHolder(@NonNull HistoryVH historyVH, int i, @NonNull History history) {
-                Log.d("###", "bind " + history);
                 historyVH.bind(history);
             }
         };
@@ -188,34 +158,32 @@ public class MainActivity extends AppCompatActivity {
 
     private void setupSwitch() {
         final DatabaseReference onOffRef = FirebaseDatabase.getInstance().getReference("on_off");
-        onOffRef.addValueEventListener(new ValueEventListener() {
-            @Override
-            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+
+        // get initial value
+        onOffRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
                 boolean onOff = (boolean) dataSnapshot.getValue();
+                if (switchOnOff.getVisibility() == View.INVISIBLE) {
+                    TransitionManager.beginDelayedTransition(findViewById(android.R.id.content),
+                            new TransitionSet()
+                                    .addTransition(new Fade(Fade.OUT).addTarget(progressBar))
+                                    .addTransition(new Fade(Fade.IN).addTarget(switchOnOff))
+                    );
+                    progressBar.setVisibility(View.GONE);
+                    switchOnOff.setVisibility(View.VISIBLE);
+                }
                 switchOnOff.setChecked(onOff);
+
+                // Listener change value after get initial value
+                switchOnOff.setOnCheckedChangeListener((__, isChecked) -> {
+                    onOffRef.setValue(isChecked)
+                            .addOnSuccessListener(MainActivity.this, ___ -> Toast.makeText(MainActivity.this, (isChecked ? "Bật" : "Tắt") + " thành công", Toast.LENGTH_SHORT).show())
+                            .addOnFailureListener(MainActivity.this, e -> Toast.makeText(MainActivity.this, "Lỗi: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+                });
             }
 
-            @Override
-            public void onCancelled(@NonNull DatabaseError databaseError) {
+            @Override public void onCancelled(@NonNull DatabaseError databaseError) {
                 Toast.makeText(MainActivity.this, databaseError.getMessage(), Toast.LENGTH_SHORT).show();
-            }
-        });
-        switchOnOff.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, final boolean isChecked) {
-                onOffRef.setValue(isChecked)
-                        .addOnSuccessListener(MainActivity.this, new OnSuccessListener<Void>() {
-                            @Override
-                            public void onSuccess(Void aVoid) {
-                                Toast.makeText(MainActivity.this, (isChecked ? "Bật" : "Tắt") + " thành công", Toast.LENGTH_SHORT).show();
-                            }
-                        })
-                        .addOnFailureListener(MainActivity.this, new OnFailureListener() {
-                            @Override
-                            public void onFailure(@NonNull Exception e) {
-                                Toast.makeText(MainActivity.this, e.getMessage(), Toast.LENGTH_SHORT).show();
-                            }
-                        });
             }
         });
     }
@@ -239,6 +207,27 @@ public class MainActivity extends AppCompatActivity {
             return true;
         }
 
+        if (id == R.id.action_delete) {
+            deleteAll();
+        }
+
         return super.onOptionsItemSelected(item);
+    }
+
+    private void deleteAll() {
+        new AlertDialog.Builder(this)
+                .setTitle("Delete all histories")
+                .setMessage("Are you sure?. This action cannot be undone")
+                .setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss())
+                .setPositiveButton("OK", (dialog, which) -> {
+                    dialog.dismiss();
+                    FirebaseDatabase
+                            .getInstance()
+                            .getReference("histories")
+                            .removeValue()
+                            .addOnSuccessListener(__ -> Toast.makeText(MainActivity.this, "Delete successfully", Toast.LENGTH_SHORT).show())
+                            .addOnFailureListener(e -> Toast.makeText(MainActivity.this, "Delete failure: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+                })
+                .show();
     }
 }

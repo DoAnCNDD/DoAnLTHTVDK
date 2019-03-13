@@ -1,5 +1,6 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
+import * as moment from 'moment-timezone';
 
 admin.initializeApp();
 
@@ -21,16 +22,24 @@ export const sendNotification = functions.database.ref('/histories/{historyId}')
     console.log({ tokens })
 
     // Notification details.
+    const timeAsString: string = moment(history['time'] as number)
+      .tz('Asia/Ho_Chi_Minh')
+      .format('HH:mm, DD/MM/YYYY');
+    const notification: admin.messaging.NotificationMessagePayload = {
+      title: '🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥',
+      body: timeAsString,
+      sound: 'default',
+      clickAction: 'TO_MAIN_ACTIVITY'
+    };
     const payload: admin.messaging.MessagingPayload = {
-      notification: {
-        title: 'Fire...fire...fire...',
-        body: `${new Date(history['time'] as number).toISOString()}-${history['verified']}`
-      },
+      notification: notification,
       data: <admin.messaging.DataMessagePayload>{
         ...historyData,
-        id: context.params['historyId']
+        id: context.params['historyId'],
+        ...notification
       },
     };
+    console.log({ payload });
 
     // Send notifications to all tokens.
     const response = await admin.messaging().sendToDevice(tokens, payload);
