@@ -126,7 +126,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
           Intent(this, OnStopNotificationReceiver::class.java).apply {
             action = STOP_NOTIFICATION_ACTION
           },
-          PendingIntent.FLAG_ONE_SHOT
+          PendingIntent.FLAG_UPDATE_CURRENT
         )
       )
       .setShowWhen(true)

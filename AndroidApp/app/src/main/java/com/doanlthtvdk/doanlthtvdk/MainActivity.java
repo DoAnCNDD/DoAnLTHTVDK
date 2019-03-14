@@ -6,6 +6,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.CompoundButton;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.Switch;
@@ -158,9 +159,14 @@ public class MainActivity extends AppCompatActivity {
 
     private void setupSwitch() {
         final DatabaseReference onOffRef = FirebaseDatabase.getInstance().getReference("on_off");
+        final CompoundButton.OnCheckedChangeListener onCheckedChangeListener = (__, isChecked) -> {
+            onOffRef.setValue(isChecked)
+                    .addOnSuccessListener(MainActivity.this, ___ -> Toast.makeText(MainActivity.this, (isChecked ? "Bật" : "Tắt") + " thành công", Toast.LENGTH_SHORT).show())
+                    .addOnFailureListener(MainActivity.this, e -> Toast.makeText(MainActivity.this, "Lỗi: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+        };
 
-        // get initial value
-        onOffRef.addListenerForSingleValueEvent(new ValueEventListener() {
+        // listen value
+        onOffRef.addValueEventListener(new ValueEventListener() {
             @Override public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
                 boolean onOff = (boolean) dataSnapshot.getValue();
                 if (switchOnOff.getVisibility() == View.INVISIBLE) {
@@ -172,14 +178,9 @@ public class MainActivity extends AppCompatActivity {
                     progressBar.setVisibility(View.GONE);
                     switchOnOff.setVisibility(View.VISIBLE);
                 }
+                switchOnOff.setOnCheckedChangeListener(null);
                 switchOnOff.setChecked(onOff);
-
-                // Listener change value after get initial value
-                switchOnOff.setOnCheckedChangeListener((__, isChecked) -> {
-                    onOffRef.setValue(isChecked)
-                            .addOnSuccessListener(MainActivity.this, ___ -> Toast.makeText(MainActivity.this, (isChecked ? "Bật" : "Tắt") + " thành công", Toast.LENGTH_SHORT).show())
-                            .addOnFailureListener(MainActivity.this, e -> Toast.makeText(MainActivity.this, "Lỗi: " + e.getMessage(), Toast.LENGTH_SHORT).show());
-                });
+                switchOnOff.setOnCheckedChangeListener(onCheckedChangeListener);
             }
 
             @Override public void onCancelled(@NonNull DatabaseError databaseError) {
