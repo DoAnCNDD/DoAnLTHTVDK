@@ -6,14 +6,11 @@ import android.app.NotificationManager;
 import android.os.Build;
 import android.util.Log;
 
-import com.google.android.gms.tasks.OnFailureListener;
-import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.iid.FirebaseInstanceId;
-import com.google.firebase.iid.InstanceIdResult;
 
-import androidx.annotation.NonNull;
+import java.util.Objects;
 
 public class App extends Application {
     public static final String TAG = "App_DoAnLTHTVDK";
@@ -25,35 +22,29 @@ public class App extends Application {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             // Create channel to show notifications.
-            String channelId = getString(R.string.default_notification_channel_id);
-            String channelName = getString(R.string.default_notification_channel_name);
-            NotificationManager notificationManager =
-                    getSystemService(NotificationManager.class);
-            notificationManager.createNotificationChannel(new NotificationChannel(channelId,
-                    channelName, NotificationManager.IMPORTANCE_LOW));
+            final String channelId = getString(R.string.default_notification_channel_id);
+            final String channelName = getString(R.string.default_notification_channel_name);
+            final NotificationManager notificationManager = getSystemService(NotificationManager.class);
+            notificationManager.createNotificationChannel(
+                    new NotificationChannel(channelId,
+                            channelName,
+                            NotificationManager.IMPORTANCE_HIGH
+                    )
+            );
         }
 
-        FirebaseInstanceId.getInstance()
+        FirebaseInstanceId
+                .getInstance()
                 .getInstanceId()
-                .addOnSuccessListener(new OnSuccessListener<InstanceIdResult>() {
-                    @Override
-                    public void onSuccess(InstanceIdResult instanceIdResult) {
-                        final String token = instanceIdResult.getToken();
-                        FirebaseDatabase.getInstance().getReference("tokens/" + token)
-                                .setValue(token)
-                                .addOnSuccessListener(new OnSuccessListener<Void>() {
-                                    @Override
-                                    public void onSuccess(Void aVoid) {
-                                        Log.d(TAG, "Send token=" + token + " success");
-                                    }
-                                })
-                                .addOnFailureListener(new OnFailureListener() {
-                                    @Override
-                                    public void onFailure(@NonNull Exception e) {
-                                        Log.d(TAG, "Send token=" + token + " failure");
-                                    }
-                                });
-                    }
-                });
+                .continueWithTask(task -> {
+                    final String token = Objects.requireNonNull(task.getResult()).getToken();
+                    return FirebaseDatabase
+                            .getInstance()
+                            .getReference("tokens/" + token)
+                            .setValue(token)
+                            .continueWith(__ -> token);
+                })
+                .addOnSuccessListener(token -> Log.d(TAG, "Send token=" + token + " success"))
+                .addOnFailureListener(e -> Log.d(TAG, "Send token failure: " + e));
     }
 }

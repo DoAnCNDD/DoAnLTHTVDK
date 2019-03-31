@@ -21,6 +21,6 @@ public class History {
 
     @Override
     public String toString() {
-        return String.format("History{id='%s', time=%d, verified=%s}", id, time, verified, Locale.getDefault());
+        return String.format("History{id='%s', time=%d, verified=%s}", id, time, verified);
     }
 }
