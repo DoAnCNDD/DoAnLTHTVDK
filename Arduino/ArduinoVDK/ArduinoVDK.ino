@@ -1,8 +1,8 @@
-#include <DNSServer.h>
-#include <ESP8266WebServer.h>
-#include "WiFiManager.h"
+
+
 
 #include <ESP8266WiFi.h>
+#include <WiFiManager.h>
 #include <FirebaseArduino.h>
 
 #define SSID_NAME "thacmoVDKteam"
@@ -39,7 +39,7 @@ void setup() {
   Serial.begin(115200);
   pinMode(LED, OUTPUT);
   digitalWrite(LED, LOW);
-  ketnoiwifi()
+  ketnoiwifi();
   Firebase.begin(FIREBASE_HOST, FIREBASE_AUTH);
 }
 
@@ -76,7 +76,7 @@ void loop() {
   if (onOff) {
     check(value_quang, value_rung);
   } else {
-    noTone();
+    noTone(LOA);
     digitalWrite(LED, LOW);
   }
   delay(1000);

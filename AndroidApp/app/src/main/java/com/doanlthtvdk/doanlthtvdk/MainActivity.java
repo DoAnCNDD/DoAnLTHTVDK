@@ -13,6 +13,16 @@ import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+import androidx.transition.Fade;
+import androidx.transition.TransitionManager;
+import androidx.transition.TransitionSet;
+
 import com.firebase.ui.database.FirebaseRecyclerAdapter;
 import com.firebase.ui.database.FirebaseRecyclerOptions;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
@@ -28,16 +38,6 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Objects;
-
-import androidx.annotation.NonNull;
-import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
-import androidx.transition.Fade;
-import androidx.transition.TransitionManager;
-import androidx.transition.TransitionSet;
 
 
 class HistoryVH extends RecyclerView.ViewHolder {
@@ -160,7 +160,7 @@ public class MainActivity extends AppCompatActivity {
     private void setupSwitch() {
         final DatabaseReference onOffRef = FirebaseDatabase.getInstance().getReference("on_off");
         final CompoundButton.OnCheckedChangeListener onCheckedChangeListener = (__, isChecked) -> {
-            onOffRef.setValue(isChecked)
+            onOffRef.setValue(isChecked ? "1" : "0")
                     .addOnSuccessListener(MainActivity.this, ___ -> Toast.makeText(MainActivity.this, (isChecked ? "Bật" : "Tắt") + " thành công", Toast.LENGTH_SHORT).show())
                     .addOnFailureListener(MainActivity.this, e -> Toast.makeText(MainActivity.this, "Lỗi: " + e.getMessage(), Toast.LENGTH_SHORT).show());
         };
@@ -168,12 +168,14 @@ public class MainActivity extends AppCompatActivity {
         // listen value
         onOffRef.addValueEventListener(new ValueEventListener() {
             @Override public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
-                boolean onOff = (boolean) dataSnapshot.getValue();
+                boolean onOff = Objects.equals(dataSnapshot.getValue(String.class), "1");
+
                 if (switchOnOff.getVisibility() == View.INVISIBLE) {
                     TransitionManager.beginDelayedTransition(findViewById(android.R.id.content),
                             new TransitionSet()
                                     .addTransition(new Fade(Fade.OUT).addTarget(progressBar))
                                     .addTransition(new Fade(Fade.IN).addTarget(switchOnOff))
+                                    .setDuration(600)
                     );
                     progressBar.setVisibility(View.GONE);
                     switchOnOff.setVisibility(View.VISIBLE);
