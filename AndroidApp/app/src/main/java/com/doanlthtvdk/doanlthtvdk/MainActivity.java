@@ -1,6 +1,9 @@
 package com.doanlthtvdk.doanlthtvdk;
 
+import android.content.IntentFilter;
+import android.net.ConnectivityManager;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -17,6 +20,7 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.transition.Fade;
@@ -38,6 +42,8 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Objects;
+
+import kotlin.Unit;
 
 
 class HistoryVH extends RecyclerView.ViewHolder {
@@ -83,6 +89,11 @@ public class MainActivity extends AppCompatActivity {
     private FirebaseRecyclerAdapter<History, HistoryVH> adapter;
     private FloatingActionButton fab;
     private ProgressBar progressBar;
+    private ProgressBar progressBarSend;
+    private Switch switchOnOffSend;
+    private NetworkChangeReceiver receiver;
+    private ConstraintLayout container;
+    private TextView textNoInternet;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -101,9 +112,14 @@ public class MainActivity extends AppCompatActivity {
         switchOnOff = findViewById(R.id.switch_on_off);
         recyclerHistory = findViewById(R.id.recycler_history);
         progressBar = findViewById(R.id.progress_bar);
+        progressBarSend = findViewById(R.id.progress_bar_send);
+        switchOnOffSend = findViewById(R.id.switch_on_off_send);
+        container = findViewById(R.id.container);
+        textNoInternet = findViewById(R.id.text_no_internet);
 
         setupRecycler();
-        setupSwitch();
+        setupSwitchOnOff();
+        setupSwitchOnOffSend();
 
         recyclerHistory.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
@@ -115,12 +131,43 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
+
+        receiver = new NetworkChangeReceiver();
+    }
+
+    @Override protected void onStart() {
+        super.onStart();
+        receiver.setOnNetworkChange(isConnected -> {
+            TransitionManager.beginDelayedTransition(findViewById(android.R.id.content),
+                    new Fade().addTarget(container).addTarget(textNoInternet));
+            if (isConnected) {
+                container.setVisibility(View.VISIBLE);
+                textNoInternet.setVisibility(View.INVISIBLE);
+            } else {
+                Toast.makeText(this, "No internet", Toast.LENGTH_SHORT).show();
+                container.setVisibility(View.INVISIBLE);
+                textNoInternet.setVisibility(View.VISIBLE);
+            }
+            return Unit.INSTANCE;
+        });
+        registerNetworkBroadcast();
+    }
+
+    @Override protected void onStop() {
+        super.onStop();
+
+        receiver.setOnNetworkChange(null);
+        unregisterNetworkChanges();
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
+
         adapter.stopListening();
+
+        receiver.setOnNetworkChange(null);
+        unregisterNetworkChanges();
     }
 
     private void setupRecycler() {
@@ -157,7 +204,7 @@ public class MainActivity extends AppCompatActivity {
         adapter.startListening();
     }
 
-    private void setupSwitch() {
+    private void setupSwitchOnOff() {
         final DatabaseReference onOffRef = FirebaseDatabase.getInstance().getReference("on_off");
         final CompoundButton.OnCheckedChangeListener onCheckedChangeListener = (__, isChecked) -> {
             onOffRef.setValue(isChecked ? "1" : "0")
@@ -175,7 +222,7 @@ public class MainActivity extends AppCompatActivity {
                             new TransitionSet()
                                     .addTransition(new Fade(Fade.OUT).addTarget(progressBar))
                                     .addTransition(new Fade(Fade.IN).addTarget(switchOnOff))
-                                    .setDuration(600)
+                                    .setDuration(700)
                     );
                     progressBar.setVisibility(View.GONE);
                     switchOnOff.setVisibility(View.VISIBLE);
@@ -190,6 +237,41 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
+
+    private void setupSwitchOnOffSend() {
+        final DatabaseReference onOffSendRef = FirebaseDatabase.getInstance().getReference("on_off_send");
+        final CompoundButton.OnCheckedChangeListener onCheckedChangeListener = (__, isChecked) -> {
+            onOffSendRef.setValue(isChecked ? "1" : "0")
+                    .addOnSuccessListener(MainActivity.this, ___ -> Toast.makeText(MainActivity.this, (isChecked ? "Bật" : "Tắt") + "thông báo thành công", Toast.LENGTH_SHORT).show())
+                    .addOnFailureListener(MainActivity.this, e -> Toast.makeText(MainActivity.this, "Lỗi: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+        };
+
+        // listen value
+        onOffSendRef.addValueEventListener(new ValueEventListener() {
+            @Override public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                boolean onOff = Objects.equals(dataSnapshot.getValue(String.class), "1");
+
+                if (switchOnOffSend.getVisibility() == View.INVISIBLE) {
+                    TransitionManager.beginDelayedTransition(findViewById(android.R.id.content),
+                            new TransitionSet()
+                                    .addTransition(new Fade(Fade.OUT).addTarget(progressBarSend))
+                                    .addTransition(new Fade(Fade.IN).addTarget(switchOnOffSend))
+                                    .setDuration(700)
+                    );
+                    progressBarSend.setVisibility(View.GONE);
+                    switchOnOffSend.setVisibility(View.VISIBLE);
+                }
+                switchOnOffSend.setOnCheckedChangeListener(null);
+                switchOnOffSend.setChecked(onOff);
+                switchOnOffSend.setOnCheckedChangeListener(onCheckedChangeListener);
+            }
+
+            @Override public void onCancelled(@NonNull DatabaseError databaseError) {
+                Toast.makeText(MainActivity.this, databaseError.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -232,5 +314,17 @@ public class MainActivity extends AppCompatActivity {
                             .addOnFailureListener(e -> Toast.makeText(MainActivity.this, "Delete failure: " + e.getMessage(), Toast.LENGTH_SHORT).show());
                 })
                 .show();
+    }
+
+    private void registerNetworkBroadcast() {
+        registerReceiver(receiver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
+    }
+
+    protected void unregisterNetworkChanges() {
+        try {
+            unregisterReceiver(receiver);
+        } catch (IllegalArgumentException e) {
+            e.printStackTrace();
+        }
     }
 }

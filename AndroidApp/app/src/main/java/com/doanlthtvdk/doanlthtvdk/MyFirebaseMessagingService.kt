@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.media.RingtoneManager
 import android.util.Log
+import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.messaging.FirebaseMessagingService
@@ -18,6 +19,22 @@ class OnStopNotificationReceiver : BroadcastReceiver() {
   override fun onReceive(context: Context?, intent: Intent?) {
     if (intent?.action == STOP_NOTIFICATION_ACTION) {
       Log.d(TAG, "onReceive id=${intent.getStringExtra("id")}")
+
+      val pendingResult = goAsync()
+      FirebaseDatabase
+        .getInstance()
+        .getReference("on_off_send")
+        .setValue("0")
+        .addOnCompleteListener { task ->
+          context?.applicationContext?.let {
+            Toast.makeText(
+              it,
+              "Tắt thông báo ${if (task.isSuccessful) "thành công" else "không thành công"}",
+              Toast.LENGTH_SHORT
+            ).show()
+          }
+          pendingResult.finish()
+        }
     }
   }
 
