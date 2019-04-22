@@ -4,6 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@drawable/bg"
     tools:context=".MainActivity">
 
     <com.google.android.material.appbar.AppBarLayout
@@ -21,9 +22,9 @@
     </com.google.android.material.appbar.AppBarLayout>
 
     <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/container"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:id="@+id/container"
         app:layout_behavior="com.google.android.material.appbar.AppBarLayout$ScrollingViewBehavior"
         tools:context=".MainActivity"
         tools:showIn="@layout/activity_main">
@@ -37,7 +38,7 @@
             android:fontFamily="@font/nunito_sans"
             android:text="Bật / tắt"
             android:textAlignment="viewStart"
-            android:textColor="#424242"
+            android:textColor="@android:color/white"
             android:textSize="18sp"
             app:layout_constraintEnd_toStartOf="@+id/switch_on_off"
             app:layout_constraintHorizontal_bias="0.5"
@@ -51,7 +52,7 @@
             android:layout_marginStart="8dp"
             android:checked="true"
             android:fontFamily="@font/nunito_sans"
-            android:padding="12dp"
+            android:padding="16dp"
             android:switchPadding="8dp"
             android:text="ON/OFF"
             android:textAlignment="center"
@@ -99,7 +100,7 @@
             android:fontFamily="@font/nunito_sans"
             android:text="Bật/tắt thông báo"
             android:textAlignment="viewStart"
-            android:textColor="#424242"
+            android:textColor="@android:color/white"
             android:textSize="18sp"
             app:layout_constraintEnd_toStartOf="@+id/switch_on_off"
             app:layout_constraintHorizontal_bias="0.5"
@@ -114,7 +115,7 @@
             android:layout_marginStart="8dp"
             android:checked="true"
             android:fontFamily="@font/nunito_sans"
-            android:padding="12dp"
+            android:padding="16dp"
             android:switchPadding="8dp"
             android:text="ON/OFF"
             android:textAlignment="center"
@@ -137,30 +138,20 @@
             app:layout_constraintTop_toTopOf="@+id/switch_on_off_send" />
 
 
-
-
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <TextView
-        android:visibility="invisible"
         android:id="@+id/text_no_internet"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="@android:color/white"
         android:fontFamily="@font/nunito_sans"
+        android:gravity="center"
         android:text="NO INTERNET CONNECTION"
         android:textAlignment="center"
         android:textColor="#D50000"
-        android:gravity="center"
         android:textSize="28sp"
+        android:visibility="invisible"
         app:layout_behavior="com.google.android.material.appbar.AppBarLayout$ScrollingViewBehavior" />
-
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/fab"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom|end"
-        android:layout_margin="@dimen/fab_margin"
-        app:srcCompat="@android:drawable/ic_dialog_email" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

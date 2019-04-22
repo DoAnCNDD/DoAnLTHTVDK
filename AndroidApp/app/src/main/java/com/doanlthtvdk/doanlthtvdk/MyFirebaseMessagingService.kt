@@ -5,10 +5,11 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.media.RingtoneManager
+import android.net.Uri
 import android.util.Log
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
@@ -16,17 +17,23 @@ import com.google.firebase.messaging.RemoteMessage
 const val STOP_NOTIFICATION_ACTION = "com.doanlthtvdk.doanlthtvdk.OnStopNotificationReceiver"
 
 class OnStopNotificationReceiver : BroadcastReceiver() {
-  override fun onReceive(context: Context?, intent: Intent?) {
+  override fun onReceive(context: Context, intent: Intent?) {
     if (intent?.action == STOP_NOTIFICATION_ACTION) {
-      Log.d(TAG, "onReceive id=${intent.getStringExtra("id")}")
+      val id = intent.getStringExtra("id")
+      Log.d(TAG, "onReceive id=$id")
 
       val pendingResult = goAsync()
-      FirebaseDatabase
-        .getInstance()
+      val database = FirebaseDatabase.getInstance()
+      database
         .getReference("on_off_send")
         .setValue("0")
+        .continueWithTask {
+          database
+            .getReference("histories/$id/verified")
+            .setValue(true)
+        }
         .addOnCompleteListener { task ->
-          context?.applicationContext?.let {
+          context.applicationContext?.let {
             Toast.makeText(
               it,
               "Tắt thông báo ${if (task.isSuccessful) "thành công" else "không thành công"}",
@@ -71,7 +78,15 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
     // Also if you intend on generating your own notifications as a result of a received FCM
     // message, here is where that should be initiated. See sendNotification method below.
-    sendNotification((remoteMessage.data ?: emptyMap()).withDefault { "" })
+    val data = (remoteMessage.data ?: emptyMap()).withDefault { "" }
+    sendNotification(data)
+
+
+    LocalBroadcastManager.getInstance(this)
+      .sendBroadcast(Intent(this, MyService.Receiver::class.java).apply {
+        action = "SHOW_OVERLAY"
+        putExtra("id", data.getValue("id"))
+      })
   }
 
   /**
@@ -125,7 +140,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
     )
 
     val channelId = getString(R.string.default_notification_channel_id)
-    val defaultSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+    val uri = Uri.parse("android.resource://$packageName/${R.raw.notification}")
     val notificationBuilder = NotificationCompat.Builder(this, channelId)
       .setSmallIcon(R.mipmap.ic_launcher)
       .setDefaults(NotificationCompat.DEFAULT_ALL)
@@ -133,7 +148,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
       .setContentTitle(data["title"])
       .setContentText(data["body"])
       .setAutoCancel(false)
-      .setSound(defaultSoundUri)
+      .setSound(uri)
       .addAction(
         R.drawable.ic_stop_black_24dp,
         "Stop notification",

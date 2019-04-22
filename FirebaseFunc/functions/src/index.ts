@@ -26,9 +26,9 @@ export const sendNotification = functions.database.ref('/histories/{historyId}')
       .tz('Asia/Ho_Chi_Minh')
       .format('HH:mm, DD/MM/YYYY');
     const notification: admin.messaging.NotificationMessagePayload = {
-      title: '🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥',
-      body: timeAsString,
-      sound: 'default',
+      title: 'Cảnh báo: cửa bị mở!!',
+      body: `Thời gian: ${timeAsString}`,
+      sound: 'notification',
       clickAction: 'TO_MAIN_ACTIVITY'
     };
     const payload: admin.messaging.MessagingPayload = {

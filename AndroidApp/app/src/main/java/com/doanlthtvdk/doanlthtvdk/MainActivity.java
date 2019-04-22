@@ -1,9 +1,12 @@
 package com.doanlthtvdk.doanlthtvdk;
 
+import android.content.Intent;
 import android.content.IntentFilter;
 import android.net.ConnectivityManager;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
-import android.util.Log;
+import android.provider.Settings;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -29,8 +32,6 @@ import androidx.transition.TransitionSet;
 
 import com.firebase.ui.database.FirebaseRecyclerAdapter;
 import com.firebase.ui.database.FirebaseRecyclerOptions;
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
-import com.google.android.material.snackbar.Snackbar;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -84,10 +85,10 @@ class HistoryVH extends RecyclerView.ViewHolder {
 }
 
 public class MainActivity extends AppCompatActivity {
+    public static final int ACTION_MANAGE_OVERLAY_PERMISSION_REQUEST_CODE = 11;
     private Switch switchOnOff;
     private RecyclerView recyclerHistory;
     private FirebaseRecyclerAdapter<History, HistoryVH> adapter;
-    private FloatingActionButton fab;
     private ProgressBar progressBar;
     private ProgressBar progressBarSend;
     private Switch switchOnOffSend;
@@ -103,12 +104,6 @@ public class MainActivity extends AppCompatActivity {
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        fab = findViewById(R.id.fab);
-        fab.setOnClickListener(view -> {
-            Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                    .setAction("Action", null).show();
-        });
-
         switchOnOff = findViewById(R.id.switch_on_off);
         recyclerHistory = findViewById(R.id.recycler_history);
         progressBar = findViewById(R.id.progress_bar);
@@ -121,22 +116,25 @@ public class MainActivity extends AppCompatActivity {
         setupSwitchOnOff();
         setupSwitchOnOffSend();
 
-        recyclerHistory.addOnScrollListener(new RecyclerView.OnScrollListener() {
-            @Override
-            public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
-                if (dy > 0) {
-                    fab.hide();
-                } else if (dy < 0) {
-                    fab.show();
-                }
-            }
-        });
-
         receiver = new NetworkChangeReceiver();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(new Intent(this, MyService.class));
+        } else {
+            startService(new Intent(this, MyService.class));
+        }
     }
 
     @Override protected void onStart() {
         super.onStart();
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (!Settings.canDrawOverlays(this)) {
+                Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                        Uri.parse("package:" + getPackageName()));
+                startActivityForResult(intent, ACTION_MANAGE_OVERLAY_PERMISSION_REQUEST_CODE);
+            }
+        }
+
         receiver.setOnNetworkChange(isConnected -> {
             TransitionManager.beginDelayedTransition(findViewById(android.R.id.content),
                     new Fade().addTarget(container).addTarget(textNoInternet));
