@@ -1,8 +1,10 @@
 #include <ESP8266WiFi.h>
+#include <DNSServer.h>
+#include <ESP8266WebServer.h>
+#include "WiFiManager.h"
 #include <FirebaseArduino.h>
+#include"pitches.h"
 
-#define SSID_NAME "Hanh Nguyen"
-#define PASSWORD "12345679"
 #define FIREBASE_HOST "doanlthtvdk.firebaseio.com"
 #define FIREBASE_AUTH "IwortuCU3Y2tt0IUeWUvsWW2Ddswl8ZkNaMemP96"
 #define CAM_BIEN_RUNG D5
@@ -13,8 +15,6 @@
 #define DINH_MUC_RUNG 700
 
 const String& path_firebase = "/histories";
-
-#include"pitches.h"
 
 // notes in the song 'Mukkathe Penne'
 static const int melody[] = {
@@ -73,6 +73,13 @@ static const int noteDurations[] = {       //duration of the notes
   4, 20,
 };
 
+void configModeCallback (WiFiManager *myWiFiManager) {
+  Serial.println("Entered config mode");
+  Serial.println(WiFi.softAPIP());
+  Serial.println(myWiFiManager->getConfigPortalSSID());
+   Serial.println("------------------------------------");
+}
+
 void play() {
   Serial.println("[play]");
   int speed = 20; //higher value, slower notes
@@ -88,11 +95,15 @@ void setup() {
   pinMode(LED, OUTPUT);
   digitalWrite(LED, LOW);
 
-  WiFi.begin(SSID_NAME, PASSWORD);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print('.');
+  WiFiManager wifiManager;
+  wifiManager.setAPCallback(configModeCallback);
+  
+  if(!wifiManager.autoConnect()) {
+    Serial.println("failed to connect and hit timeout");
+    ESP.reset();
+    delay(1000);
   }
+  
   Firebase.begin(FIREBASE_HOST, FIREBASE_AUTH);
   Serial.println("[connected]");
 }
