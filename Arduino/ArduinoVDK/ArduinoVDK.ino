@@ -3,11 +3,11 @@
 #include "pitches.h"
 #include <ESP8266HTTPClient.h>
 
-#define CAM_BIEN_RUNG D7
-#define LED D6
-#define LOA D5
-#define TRIG D3
-#define ECHO D4
+#define CAM_BIEN_RUNG D5
+#define LED D4
+#define LOA D3
+#define TRIG D7
+#define ECHO D6
 #define DINH_MUC_RUNG 700
 #define DINH_MUC_KHOANG_CACH 10
 
@@ -119,7 +119,7 @@ void check(int khoang_cach, int value_rung) {
     play();
   }
 }
-int dokhoangcach(){
+int dokhoangcach() {
   unsigned long duration; // biến đo thời gian
   int distance;           // biến lưu khoảng cách
 
@@ -140,6 +140,7 @@ int dokhoangcach(){
 void postHTTP() {
   if (WiFi.status() == WL_CONNECTED) {
     HTTPClient http;
+    http.setTimeout(10000);
     http.begin(BASE_URL + "/notification");
 
     int httpCode = http.POST("");
@@ -160,6 +161,7 @@ void postHTTP() {
 int getHTTP(String path) {
   if (WiFi.status() == WL_CONNECTED) {
     HTTPClient http;
+    http.setTimeout(10000);
     http.begin(BASE_URL + path);
 
     int httpCode = http.GET();
