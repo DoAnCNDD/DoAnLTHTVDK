@@ -1,19 +1,15 @@
 #include <ESP8266WiFi.h>
-#include <DNSServer.h>
-#include <ESP8266WebServer.h>
 #include "WiFiManager.h"
-#include <FirebaseArduino.h>
-#include"pitches.h"
+#include "pitches.h"
+#include <ESP8266HTTPClient.h>
 
-#define FIREBASE_HOST "doanlthtvdk.firebaseio.com"
-#define FIREBASE_AUTH "IwortuCU3Y2tt0IUeWUvsWW2Ddswl8ZkNaMemP96"
 #define CAM_BIEN_RUNG D5
-#define CAM_BIEN_QUANG D6
 #define LED D7
 #define LOA D8
-#define DINH_MUC_QUANG 700
 #define DINH_MUC_RUNG 700
+#define DINH_MUC_KHOANG_CACH 10
 
+const String& BASE_URL = "http://node-auth-081098.herokuapp.com/do_an_ltht_vdk";
 const String& path_firebase = "/histories";
 
 // notes in the song 'Mukkathe Penne'
@@ -77,7 +73,7 @@ void configModeCallback (WiFiManager *myWiFiManager) {
   Serial.println("Entered config mode");
   Serial.println(WiFi.softAPIP());
   Serial.println(myWiFiManager->getConfigPortalSSID());
-   Serial.println("------------------------------------");
+  Serial.println("------------------------------------");
 }
 
 void play() {
@@ -96,64 +92,98 @@ void setup() {
   digitalWrite(LED, LOW);
 
   WiFiManager wifiManager;
+  //wifiManager.resetSettings();
   wifiManager.setAPCallback(configModeCallback);
-  
-  if(!wifiManager.autoConnect()) {
-    Serial.println("failed to connect and hit timeout");
+
+  if (!wifiManager.autoConnect()) {
+    Serial.println("[ERROR] failed to connect and hit timeout");
     ESP.reset();
     delay(1000);
   }
-  
-  Firebase.begin(FIREBASE_HOST, FIREBASE_AUTH);
-  Serial.println("[connected]");
+
+  Serial.println("[WIFI_CONNECTED]");
 }
 
-void check(int value_quang, int value_rung) {
-  if (value_quang > DINH_MUC_QUANG) {
-
+void check(int khoang_cach, int value_rung) {
+  if (khoang_cach > DINH_MUC_KHOANG_CACH) {
     Serial.print("[on_off_send]=");
-    String on_off_send = Firebase.getString("on_off_send");
+    int on_off_send = getHTTP("/on_off_send");
     Serial.println(on_off_send);
-    if (on_off_send == "1") {
-      send_firebase();
+    if (on_off_send == 1) {
+      postHTTP();
     }
-
     play();
   } else if (value_rung > DINH_MUC_RUNG) {
     play();
   }
 }
 
-void send_firebase() {
-  StaticJsonBuffer<1000> jsonBuffer;
-  JsonObject& object1 = jsonBuffer.createObject();
-  object1["verified"] = false;
-  const JsonVariant& variant = object1;
-  Firebase.push(path_firebase, variant);
-  
-  delay(300);
-  Serial.println("[send_firebase_done]");
+void postHTTP() {
+  if (WiFi.status() == WL_CONNECTED) {
+    HTTPClient http;
+    http.begin(BASE_URL + "/notification");
+
+    int httpCode = http.POST("");
+    if (httpCode > 0) {
+      String payload = http.getString();
+      Serial.print("[POST_NOTIFICATION_SUCCESS] result = ");
+      Serial.println(payload);
+    } else {
+      Serial.print("[POST_NOTIFICATION_ERROR] httpCode = ");
+      Serial.println(httpCode);
+    }
+    http.end();
+  } else {
+    Serial.println("[POST_NOTIFICATION_ERROR] no connected wifi");
+  }
 }
 
+int getHTTP(String path) {
+  if (WiFi.status() == WL_CONNECTED) {
+    HTTPClient http;
+    http.begin(BASE_URL + path);
+
+    int httpCode = http.GET();
+    if (httpCode > 0) {
+      String payload = http.getString();
+      Serial.print("[GET_");
+      Serial.print(path);
+      Serial.print("_SUCCESS] = ");
+      Serial.println(payload);
+      return payload.toInt();
+    } else {
+      Serial.print("[GET_");
+      Serial.print(path);
+      Serial.print("_ERROR] httpCode = ");
+      Serial.println(httpCode);
+      return -1;
+    }
+    http.end();
+  } else {
+    Serial.print("[GET_");
+    Serial.print(path);
+    Serial.println("_ERROR] no connected wifi");
+    return -1;
+  }
+}
 
 void loop() {
+  int on_off = getHTTP("/on_off");
   Serial.print("[on_off]=");
-  String on_off = Firebase.getString("on_off");
   Serial.println(on_off);
-
-  if (on_off == "1") {
+  if (on_off == 1) {
     digitalWrite(LED, HIGH);
 
-    int quang = analogRead(CAM_BIEN_QUANG);
+    int khoang_cach = 0;
     int rung = analogRead(CAM_BIEN_RUNG);
-    
-    Serial.print("[quang]=");
-    Serial.println(quang);
+
+    Serial.print("[khoang_cach]=");
+    Serial.println(khoang_cach);
     Serial.print("[rung]=");
     Serial.println(rung);
 
-    check(quang, rung);
-  } else if (on_off == "0") {
+    check(khoang_cach, rung);
+  } else if (on_off == 0) {
     noTone(LOA);
     digitalWrite(LED, LOW);
   }
