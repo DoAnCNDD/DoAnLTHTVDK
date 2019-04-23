@@ -3,9 +3,11 @@
 #include "pitches.h"
 #include <ESP8266HTTPClient.h>
 
-#define CAM_BIEN_RUNG D5
-#define LED D7
-#define LOA D8
+#define CAM_BIEN_RUNG D7
+#define LED D6
+#define LOA D5
+#define TRIG D3
+#define ECHO D4
 #define DINH_MUC_RUNG 700
 #define DINH_MUC_KHOANG_CACH 10
 
@@ -89,6 +91,8 @@ void play() {
 void setup() {
   Serial.begin(115200);
   pinMode(LED, OUTPUT);
+  pinMode(ECHO, INPUT);
+  pinMode(TRIG, OUTPUT);
   digitalWrite(LED, LOW);
 
   WiFiManager wifiManager;
@@ -106,9 +110,7 @@ void setup() {
 
 void check(int khoang_cach, int value_rung) {
   if (khoang_cach > DINH_MUC_KHOANG_CACH) {
-    Serial.print("[on_off_send]=");
     int on_off_send = getHTTP("/on_off_send");
-    Serial.println(on_off_send);
     if (on_off_send == 1) {
       postHTTP();
     }
@@ -117,7 +119,24 @@ void check(int khoang_cach, int value_rung) {
     play();
   }
 }
+int dokhoangcach(){
+  unsigned long duration; // biến đo thời gian
+  int distance;           // biến lưu khoảng cách
 
+  /* Phát xung từ chân trig */
+  digitalWrite(TRIG, 0);  // tắt chân trig
+  delayMicroseconds(2);
+  digitalWrite(TRIG, 1);  // phát xung từ chân trig
+  delayMicroseconds(5);   // xung có độ dài 5 microSeconds
+  digitalWrite(TRIG, 0);  // tắt chân trig
+
+  /* Tính toán thời gian */
+  // Đo độ rộng xung HIGH ở chân echo.
+  duration = pulseIn(ECHO, HIGH);
+  // Tính khoảng cách đến vật.
+  distance = int(duration / 2 / 29.412);
+  return distance;
+}
 void postHTTP() {
   if (WiFi.status() == WL_CONNECTED) {
     HTTPClient http;
@@ -174,7 +193,7 @@ void loop() {
   if (on_off == 1) {
     digitalWrite(LED, HIGH);
 
-    int khoang_cach = 0;
+    int khoang_cach = dokhoangcach();
     int rung = analogRead(CAM_BIEN_RUNG);
 
     Serial.print("[khoang_cach]=");
