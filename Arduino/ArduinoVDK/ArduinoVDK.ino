@@ -3,72 +3,25 @@
 #include "pitches.h"
 #include <ESP8266HTTPClient.h>
 
-#define CAM_BIEN_RUNG D5
-#define LED D4
-#define LOA D3
-#define TRIG D7
-#define ECHO D6
-#define DINH_MUC_RUNG 700
-#define DINH_MUC_KHOANG_CACH 10
+#define CAM_BIEN_RUNG         D8
+#define LED                   D5
+#define LOA                   D1
+#define TRIG                  D7
+#define ECHO                  D6
+#define DINH_MUC_RUNG         700
+#define DINH_MUC_KHOANG_CACH  5
 
 const String& BASE_URL = "http://node-auth-081098.herokuapp.com/do_an_ltht_vdk";
 const String& path_firebase = "/histories";
 
-// notes in the song 'Mukkathe Penne'
-static const int melody[] = {
-  NOTE_D4, NOTE_G4, NOTE_FS4, NOTE_A4,
-  NOTE_G4, NOTE_C5, NOTE_AS4, NOTE_A4,
-  NOTE_FS4, NOTE_G4, NOTE_A4, NOTE_FS4, NOTE_DS4, NOTE_D4,
-  NOTE_C4, NOTE_D4, 0,
-
-  NOTE_D4, NOTE_G4, NOTE_FS4, NOTE_A4,
-  NOTE_G4, NOTE_C5, NOTE_D5, NOTE_C5, NOTE_AS4, NOTE_C5, NOTE_AS4, NOTE_A4,      //29               //8
-  NOTE_FS4, NOTE_G4, NOTE_A4, NOTE_FS4, NOTE_DS4, NOTE_D4,
-  NOTE_C4, NOTE_D4, 0,
-
-  NOTE_D4, NOTE_FS4, NOTE_G4, NOTE_A4, NOTE_DS5, NOTE_D5,
-  NOTE_C5, NOTE_AS4, NOTE_A4, NOTE_C5,
-  NOTE_C4, NOTE_D4, NOTE_DS4, NOTE_FS4, NOTE_D5, NOTE_C5,
-  NOTE_AS4, NOTE_A4, NOTE_C5, NOTE_AS4,             //58
-
-  NOTE_D4, NOTE_FS4, NOTE_G4, NOTE_A4, NOTE_DS5, NOTE_D5,
-  NOTE_C5, NOTE_D5, NOTE_C5, NOTE_AS4, NOTE_C5, NOTE_AS4, NOTE_A4, NOTE_C5, NOTE_G4,
-  NOTE_A4, 0, NOTE_AS4, NOTE_A4, 0, NOTE_G4,
-  NOTE_G4, NOTE_A4, NOTE_G4, NOTE_FS4, 0,
-
-  NOTE_C4, NOTE_D4, NOTE_G4, NOTE_FS4, NOTE_DS4,
-  NOTE_C4, NOTE_D4, 0,
-  NOTE_C4, NOTE_D4, NOTE_G4, NOTE_FS4, NOTE_DS4,
-  NOTE_C4, NOTE_D4, END
-
+// notes in the melody:
+int melody[] = {
+  NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_B3, NOTE_C4
 };
 
-// note durations: 8 = quarter note, 4 = 8th note, etc.
-static const int noteDurations[] = {       //duration of the notes
-  8, 4, 8, 4,
-  4, 4, 4, 12,
-  4, 4, 4, 4, 4, 4,
-  4, 16, 4,
-
-  8, 4, 8, 4,
-  4, 2, 1, 1, 2, 1, 1, 12,
-  4, 4, 4, 4, 4, 4,
-  4, 16, 4,
-
-  4, 4, 4, 4, 4, 4,
-  4, 4, 4, 12,
-  4, 4, 4, 4, 4, 4,
-  4, 4, 4, 12,
-
-  4, 4, 4, 4, 4, 4,
-  2, 1, 1, 2, 1, 1, 4, 8, 4,
-  2, 6, 4, 2, 6, 4,
-  2, 1, 1, 16, 4,
-
-  4, 8, 4, 4, 4,
-  4, 16, 4,
-  4, 8, 4, 4, 4,
-  4, 20,
+// note durations: 4 = quarter note, 8 = eighth note, etc.:
+int noteDurations[] = {
+  4, 8, 8, 4, 4, 4, 4, 4
 };
 
 void configModeCallback (WiFiManager *myWiFiManager) {
@@ -79,13 +32,23 @@ void configModeCallback (WiFiManager *myWiFiManager) {
 }
 
 void play() {
-  Serial.println("[play]");
-  int speed = 20; //higher value, slower notes
-  for (int thisNote = 0; melody[thisNote] != -1; thisNote++) {
-    int noteDuration = speed * noteDurations[thisNote];
-    tone(LOA, melody[thisNote], noteDuration * .95);
+  Serial.println("[PLAY]");
+  // iterate over the notes of the melody:
+  for (int thisNote = 0; thisNote < 8; thisNote++) {
+
+    // to calculate the note duration, take one second divided by the note type.
+    //e.g. quarter note = 1000 / 4, eighth note = 1000/8, etc.
+    int noteDuration = 1000 / noteDurations[thisNote];
+    tone(LOA, melody[thisNote], noteDuration);
+
+    // to distinguish the notes, set a minimum time between them.
+    // the note's duration + 30% seems to work well:
+    int pauseBetweenNotes = noteDuration * 1.30;
+    delay(pauseBetweenNotes);
+    // stop the tone playing:
+    noTone(LOA);
   }
-  Serial.println("[end_play]");
+  Serial.println("[END_PLAY]");
 }
 
 void setup() {
@@ -110,6 +73,7 @@ void setup() {
 
 void check(int khoang_cach, int value_rung) {
   if (khoang_cach > DINH_MUC_KHOANG_CACH) {
+    play();
     int on_off_send = getHTTP("/on_off_send");
     if (on_off_send == 1) {
       postHTTP();
