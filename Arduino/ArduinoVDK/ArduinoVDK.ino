@@ -14,7 +14,6 @@
 #define PASSWORD              "12345678"
 
 const String& BASE_URL = "http://node-auth-081098.herokuapp.com/do_an_ltht_vdk";
-const String& path_firebase = "/histories";
 
 // notes in the melody:
 int melody[] = {
@@ -77,11 +76,6 @@ void check(int khoang_cach, int value_rung) {
   if (khoang_cach > DINH_MUC_KHOANG_CACH) {
     play();
     postHTTP();
-//    int on_off_send = getHTTP("/on_off_send");
-//    if (on_off_send == 1) {
-//      postHTTP();
-//    }
-    play();
   } else if (value_rung > DINH_MUC_RUNG) {
     play();
   }
@@ -125,38 +119,32 @@ void postHTTP() {
   }
 }
 
-int getHTTP(String path) {
+int getHTTP() {
   if (WiFi.status() == WL_CONNECTED) {
     HTTPClient http;
     http.setTimeout(10000);
-    http.begin(BASE_URL + path);
+    http.begin(BASE_URL + "/on_off");
 
     int httpCode = http.GET();
     if (httpCode > 0) {
       String payload = http.getString();
-      Serial.print("[GET_");
-      Serial.print(path);
-      Serial.print("_SUCCESS] = ");
+      Serial.print("[GET_on_off_SUCCESS] = ");
       Serial.println(payload);
       return payload.toInt();
     } else {
-      Serial.print("[GET_");
-      Serial.print(path);
-      Serial.print("_ERROR] httpCode = ");
+      Serial.print("[GET_on_off_ERROR] httpCode = ");
       Serial.println(httpCode);
       return -1;
     }
     http.end();
   } else {
-    Serial.print("[GET_");
-    Serial.print(path);
-    Serial.println("_ERROR] no connected wifi");
+    Serial.print("[GET_on_off_ERROR] no connected wifi");
     return -1;
   }
 }
 
 void loop() {
-  int on_off = getHTTP("/on_off");
+  int on_off = getHTTP();
   Serial.print("[on_off]=");
   Serial.println(on_off);
   if (on_off == 1) {

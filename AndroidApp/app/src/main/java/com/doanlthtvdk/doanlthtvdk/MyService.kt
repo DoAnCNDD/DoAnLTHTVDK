@@ -13,7 +13,6 @@ import android.net.Uri
 import android.view.LayoutInflater
 import android.view.View
 import android.view.WindowManager
-import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.google.firebase.database.FirebaseDatabase
@@ -76,7 +75,6 @@ class MyService : Service() {
         if (isShowing) return
 
         isShowing = true
-        Toast.makeText(context, "Fucking...", Toast.LENGTH_SHORT).show()
 
         val uri = Uri.parse("android.resource://${context.packageName}/${R.raw.notification}")
         val mediaPlayer = MediaPlayer()
@@ -103,6 +101,11 @@ class MyService : Service() {
         val view = LayoutInflater.from(context).inflate(R.layout.layout_warning, null)
 
         view.findViewById<View>(R.id.button).setOnClickListener {
+          kotlin.runCatching { windowManager.removeViewImmediate(view) }
+          isShowing = false
+          mediaPlayer.stop()
+          mediaPlayer.release()
+
           val database = FirebaseDatabase.getInstance()
           database
             .getReference("on_off_send")
@@ -113,10 +116,7 @@ class MyService : Service() {
                 .setValue(true)
             }
             .addOnSuccessListener {
-              windowManager.removeViewImmediate(view)
-              isShowing = false
-              mediaPlayer.stop()
-              mediaPlayer.release()
+
             }
         }
         windowManager.addView(
