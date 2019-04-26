@@ -10,6 +10,8 @@
 #define ECHO                  D6
 #define DINH_MUC_RUNG         700
 #define DINH_MUC_KHOANG_CACH  5
+#define SSID                  "DoAnVDK_PHH"
+#define PASSWORD              "12345678"
 
 const String& BASE_URL = "http://node-auth-081098.herokuapp.com/do_an_ltht_vdk";
 const String& path_firebase = "/histories";
@@ -59,10 +61,10 @@ void setup() {
   digitalWrite(LED, LOW);
 
   WiFiManager wifiManager;
-  //wifiManager.resetSettings();
+//  wifiManager.resetSettings();
   wifiManager.setAPCallback(configModeCallback);
 
-  if (!wifiManager.autoConnect()) {
+  if (!wifiManager.autoConnect(SSID, PASSWORD)) {
     Serial.println("[ERROR] failed to connect and hit timeout");
     ESP.reset();
     delay(1000);
@@ -74,10 +76,11 @@ void setup() {
 void check(int khoang_cach, int value_rung) {
   if (khoang_cach > DINH_MUC_KHOANG_CACH) {
     play();
-    int on_off_send = getHTTP("/on_off_send");
-    if (on_off_send == 1) {
-      postHTTP();
-    }
+    postHTTP();
+//    int on_off_send = getHTTP("/on_off_send");
+//    if (on_off_send == 1) {
+//      postHTTP();
+//    }
     play();
   } else if (value_rung > DINH_MUC_RUNG) {
     play();
