@@ -72,6 +72,7 @@ class MyService : Service() {
   class Receiver : BroadcastReceiver() {
     private var isShowing = false
     private var view: View? = null
+    private var mediaPlayer: MediaPlayer? = null
 
     override fun onReceive(context: Context, intent: Intent) {
       Log.d(OnStopNotificationReceiver.TAG, "Receiver ${intent.action}")
@@ -82,7 +83,7 @@ class MyService : Service() {
         isShowing = true
 
         val uri = Uri.parse("android.resource://${context.packageName}/${R.raw.notification}")
-        val mediaPlayer = MediaPlayer()
+        val mediaPlayer = MediaPlayer().also { this@Receiver.mediaPlayer = it }
         mediaPlayer.setDataSource(context, uri)
         val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
         if (audioManager.getStreamVolume(AudioManager.STREAM_RING) != 0) {
@@ -139,6 +140,8 @@ class MyService : Service() {
         kotlin.runCatching {
           val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
           view?.let { windowManager.removeViewImmediate(it) }
+          mediaPlayer?.stop()
+          mediaPlayer?.release()
         }.onSuccess {
           Log.d(
             OnStopNotificationReceiver.TAG,
