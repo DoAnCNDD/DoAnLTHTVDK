@@ -1,5 +1,6 @@
 package com.doanlthtvdk.doanlthtvdk
 
+import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.BroadcastReceiver
@@ -10,6 +11,7 @@ import android.graphics.PixelFormat
 import android.media.AudioManager
 import android.media.MediaPlayer
 import android.net.Uri
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.WindowManager
@@ -50,7 +52,7 @@ class MyService : Service() {
     receiver = Receiver().also {
       LocalBroadcastManager
         .getInstance(this)
-        .registerReceiver(it, IntentFilter("SHOW_OVERLAY"))
+        .registerReceiver(it, IntentFilter("SHOW_OVERLAY").apply { addAction("HIDE_OVERLAY") })
     }
 
     return START_STICKY
@@ -69,8 +71,11 @@ class MyService : Service() {
 
   class Receiver : BroadcastReceiver() {
     private var isShowing = false
+    private var view: View? = null
 
     override fun onReceive(context: Context, intent: Intent) {
+      Log.d(OnStopNotificationReceiver.TAG, "Receiver ${intent.action}")
+
       if (intent.action == "SHOW_OVERLAY") {
         if (isShowing) return
 
@@ -93,12 +98,15 @@ class MyService : Service() {
           WindowManager.LayoutParams.MATCH_PARENT,
           WindowManager.LayoutParams.TYPE_SYSTEM_ALERT,
           WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
-            or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
-            or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
+              or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+              or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
           PixelFormat.TRANSLUCENT
         )
         val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-        val view = LayoutInflater.from(context).inflate(R.layout.layout_warning, null)
+        val view = LayoutInflater
+          .from(context)
+          .inflate(R.layout.layout_warning, null)
+          .also { this@Receiver.view = it }
 
         view.findViewById<View>(R.id.button).setOnClickListener {
           kotlin.runCatching { windowManager.removeViewImmediate(view) }
@@ -106,23 +114,38 @@ class MyService : Service() {
           mediaPlayer.stop()
           mediaPlayer.release()
 
+          val id = intent.getStringExtra("id")
+          val notificationManager =
+            context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+          notificationManager.cancel(id.toIntOrNull() ?: 0 /* ID of notification */)
+
           val database = FirebaseDatabase.getInstance()
           database
             .getReference("on_off_send")
             .setValue("0")
             .continueWithTask {
               database
-                .getReference("histories/${intent.getStringExtra("id")}/verified")
+                .getReference("histories/$id/verified")
                 .setValue(true)
             }
-            .addOnSuccessListener {
-
-            }
+            .addOnSuccessListener {}
         }
         windowManager.addView(
           view,
           params
         )
+      } else if (intent.action == "HIDE_OVERLAY") {
+        Log.d(OnStopNotificationReceiver.TAG, "Receiver ${intent.action} HIDE_OVERLAY")
+        kotlin.runCatching {
+          val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+          view?.let { windowManager.removeViewImmediate(it) }
+        }.onSuccess {
+          Log.d(
+            OnStopNotificationReceiver.TAG,
+            "Receiver ${intent.action} HIDE_OVERLAY_SUCCESS"
+          )
+          isShowing = false
+        }
       }
     }
   }

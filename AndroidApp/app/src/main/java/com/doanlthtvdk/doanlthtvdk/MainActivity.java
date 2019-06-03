@@ -240,7 +240,7 @@ public class MainActivity extends AppCompatActivity {
         final DatabaseReference onOffSendRef = FirebaseDatabase.getInstance().getReference("on_off_send");
         final CompoundButton.OnCheckedChangeListener onCheckedChangeListener = (__, isChecked) -> {
             onOffSendRef.setValue(isChecked ? "1" : "0")
-                    .addOnSuccessListener(MainActivity.this, ___ -> Toast.makeText(MainActivity.this, (isChecked ? "Bật" : "Tắt") + "thông báo thành công", Toast.LENGTH_SHORT).show())
+                    .addOnSuccessListener(MainActivity.this, ___ -> Toast.makeText(MainActivity.this, (isChecked ? "Bật" : "Tắt") + " thông báo thành công", Toast.LENGTH_SHORT).show())
                     .addOnFailureListener(MainActivity.this, e -> Toast.makeText(MainActivity.this, "Lỗi: " + e.getMessage(), Toast.LENGTH_SHORT).show());
         };
 

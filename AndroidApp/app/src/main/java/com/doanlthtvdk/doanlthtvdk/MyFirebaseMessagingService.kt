@@ -10,17 +10,38 @@ import android.util.Log
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ValueEventListener
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
+
 
 const val STOP_NOTIFICATION_ACTION = "com.doanlthtvdk.doanlthtvdk.OnStopNotificationReceiver"
 
 class OnStopNotificationReceiver : BroadcastReceiver() {
   override fun onReceive(context: Context, intent: Intent?) {
+    Log.d(TAG, "onReceive action=${intent?.action}")
     if (intent?.action == STOP_NOTIFICATION_ACTION) {
-      val id = intent.getStringExtra("id")
+      val id = intent.getStringExtra("id") ?: return
       Log.d(TAG, "onReceive id=$id")
+
+      val notificationManager =
+        context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+      notificationManager.cancel(id.toIntOrNull() ?: 0 /* ID of notification */)
+
+      LocalBroadcastManager
+        .getInstance(context)
+        .sendBroadcast(
+          Intent(
+            context,
+            MyService.Receiver::class.java
+          ).apply {
+            action = "HIDE_OVERLAY"
+          }
+        )
+        .let { Log.d(TAG, "send HIDE_OVERLAY $it") }
 
       val pendingResult = goAsync()
       val database = FirebaseDatabase.getInstance()
@@ -82,10 +103,25 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
     sendNotification(data)
 
 
-    LocalBroadcastManager.getInstance(this)
-      .sendBroadcast(Intent(this, MyService.Receiver::class.java).apply {
-        action = "SHOW_OVERLAY"
-        putExtra("id", data.getValue("id"))
+    val database = FirebaseDatabase.getInstance()
+    database
+      .getReference("on_off_send")
+      .addListenerForSingleValueEvent(object : ValueEventListener {
+        override fun onCancelled(p0: DatabaseError) {}
+
+        override fun onDataChange(snapshot: DataSnapshot) {
+          if (snapshot.value.toString() == "1") {
+            LocalBroadcastManager.getInstance(this@MyFirebaseMessagingService)
+              .sendBroadcast(
+                Intent(
+                  this@MyFirebaseMessagingService,
+                  MyService.Receiver::class.java
+                ).apply {
+                  action = "SHOW_OVERLAY"
+                  putExtra("id", data.getValue("id"))
+                })
+          }
+        }
       })
   }
 
@@ -157,6 +193,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
           1 /* Request code*/,
           Intent(this, OnStopNotificationReceiver::class.java).apply {
             action = STOP_NOTIFICATION_ACTION
+            putExtra("id", data.getValue("id"))
           },
           PendingIntent.FLAG_UPDATE_CURRENT
         )
