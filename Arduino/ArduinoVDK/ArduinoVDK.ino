@@ -130,13 +130,14 @@ int getHTTP() {
       String payload = http.getString();
       Serial.print("[GET_on_off_SUCCESS] = ");
       Serial.println(payload);
+      http.end();
       return payload.toInt();
     } else {
       Serial.print("[GET_on_off_ERROR] httpCode = ");
       Serial.println(httpCode);
+      http.end();
       return -1;
     }
-    http.end();
   } else {
     Serial.print("[GET_on_off_ERROR] no connected wifi");
     return -1;
